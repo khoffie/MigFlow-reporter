@@ -1,11 +1,14 @@
 ##' Reads and augments data and output from julia fit
 ##' @title Read Julia input data and output data
-##' @param juliaout_path
+##' @param juliaout_path character, path to julia output of fitted
+##'   chains, extracted density evaluations, estimated locational
+##'   desirability and plots
+##' @param data_path character, path to data directory for project
 ##' @return list, list of data.tables
 ##' @author Konstantin Hoffie
 ##' @import data.table
 ##' @export read_julia_output
-read_julia_output <- function(juliaout_path) {
+read_julia_output <- function(juliaout_path, data_path) {
   read_output <- function(path, type, model = "US-model") {
     age_lvls <- c("below18", "18-25", "25-30", "30-50", "50-65", "above65")
     read_agegroup <- function(path, file) {
@@ -43,8 +46,9 @@ read_julia_output <- function(juliaout_path) {
     dt[flows == 0, actual_imp := rnds]
     return(NULL)
   }
-  augment_geog_germ <- function(geog, flows, districts) {
-    shp <- setDT(sf::read_sf("../data/clean/shapes/districts.shp"))
+  augment_geog_germ <- function(data_path, geog, flows, districts) {
+    shp <- setDT(sf::read_sf(file.path(data_path,
+                                       "clean/shapes/districts.shp")))
     shp[, AGS := as.integer(AGS)]
     ## There is something wrong with 2017. Apparently it holds all years
     ## 2011 to 2017 but they are not distinguished.
@@ -89,7 +93,7 @@ read_julia_output <- function(juliaout_path) {
     dt_dens[rec_grp, year := i.year, on = .(grp)]
   }
 
-  districts <- fread("../data/districts.csv")
+  districts <- fread(file.path(data_path, "districts.csv"))
   ##    path <- file.path(path, "manuscript_input")
   path <- juliaout_path
   dt_geog <- read_output(path, "germgeog")
@@ -97,12 +101,12 @@ read_julia_output <- function(juliaout_path) {
   dt_params <- read_output(path, "germparams")
   params_add_year(dt_params)
   dt_flows <- augment_flows(dt_flows, districts)
-  dt_geog <- augment_geog_germ(dt_geog, dt_flows, districts)
+  dt_geog <- augment_geog_germ(data_path, dt_geog, dt_flows, districts)
   dt_dens <- read_output(path, "germdensfun")
   sax <- dens_add_saxdens(dt_dens, districts)
   dens_add_year(dt_dens, dt_flows)
-  shp_st <- setDT(sf::st_read(file.path(p, "data/raw/shapes/states.shp")))
-  cor_ext <- fread(file.path(p, "data/clean/correct.csv"))[year < 2021]
+  shp_st <- setDT(sf::st_read(file.path(data_path, "raw/shapes/states.shp")))
+  cor_ext <- fread(file.path(data_path, "clean/correct.csv"))[year < 2021]
   out <- list(dt_flows = dt_flows, dt_geog = dt_geog, dt_dens = dt_dens,
               dt_params = dt_params, districts = districts,
               shp_st = shp_st, cor_ext = cor_ext, sax = sax)
