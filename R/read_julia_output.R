@@ -52,7 +52,7 @@ read_output <- function(path, type, model = "US-model") {
 }
 augment_flows <- function(flows, districts) {
   resid1 <- resid2 <- fromdens <- i.density <- distcode <- NULL
-  year <- todens <- year <- fromdist <- todist <- NULL
+  year <- todens <- year <- fromdist <- todist <- . <- NULL
   preds <-
     flows[, resid1 := (flows - preds) / preds]
   flows[, resid2 := sign(resid1) * log(1 + abs(resid1))]
@@ -74,21 +74,25 @@ impute_actual_zeros <- function(dt, mean = -15) {
 augment_geog_germ <- function(data_path, geog, flows, districts) {
   AGS <- year <- net <- i.net <- region <- agegroup <- total <- NULL
   geometry <- i.geometry <- pop_all <- i.pop <- distcode <- NULL
-  total_pred <- i.total <- NULL
+  total_pred <- i.total <- . <- NULL
   shp <- data.table::setDT(sf::read_sf(file.path(data_path,
                                      "clean/shapes/districts.shp")))
   shp[, AGS := as.integer(AGS)]
   ## There is something wrong with 2017. Apparently it holds all years
   ## 2011 to 2017 but they are not distinguished.
   geog[, year := rep(c(2000:2002, 2004:2017), each = 401 * 6)]
-  net <- calculate_net(flows, "flows", by = c("year", "agegroup"))
-  net_pred <- calculate_net(flows, "preds", by = c("year", "agegroup"))
+  net <- helpeR::calculate_net(flows, "flows",
+                               by = c("year", "agegroup"))
+  net_pred <- helpeR::calculate_net(flows, "preds",
+                                    by = c("year", "agegroup"))
   geog[net, net := i.net, on = .(distcode = region, year, agegroup)]
   geog[net, total := i.total, on = .(distcode = region, year, agegroup)]
   geog[shp, geometry := i.geometry, on = .(distcode = AGS)]
   geog[districts, pop_all := i.pop, on = .(distcode, year)]
-  geog[net_pred, net_pred := i.net, on = .(distcode = region, year, agegroup)]
-  geog[net_pred, total_pred := i.total, on = .(distcode = region, year, agegroup)]
+  geog[net_pred, net_pred := i.net,
+       on = .(distcode = region, year, agegroup)]
+  geog[net_pred, total_pred := i.total,
+       on = .(distcode = region, year, agegroup)]
   return(geog)
 }
 params_add_year <- function(dt_params) {
