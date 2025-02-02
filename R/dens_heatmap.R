@@ -8,8 +8,11 @@
 ##' @import data.table
 ##' @export densheatmap
 densheatmap <- function(dt, sax, min_y = 2011) {
-  dt2 <- copy(dt)
+  fromdens <- todens <- year <- agegroup <- funval <- NULL
+  distcode <- fromsax <- tosax <- NULL
+  dt2 <- data.table::copy(dt)
   replace_densities <- function(dt_dens, base_year) {
+    year <- fromdens <- todens <- NULL
     ## for some reason fromdens and todens differ slightly between years
     ## 2000 to 2010, thus heatmaps can not be plotted together for years
     find_closest <- function(values, base_values) {
@@ -22,12 +25,11 @@ densheatmap <- function(dt, sax, min_y = 2011) {
     message(sprintf("replaced fromdens and todens with closest density from %s", base_year))
   }
   replace_densities(dt2, 2017)
-    reverse <- function(x) {
-        meddens <- 199.9473 ## districts[, median(density)]
-        y <- round(exp(x) * meddens, 0)
-        return(y)
-    }
-
+  reverse <- function(x) {
+    meddens <- 199.9473 ## districts[, median(density)]
+    y <- round(exp(x) * meddens, 0)
+    return(y)
+  }
   brks <- -1:3
   dt2 <- dt2[fromdens < 2.7 & todens < 2.7 & year >= min_y]
   age <- dt2[, unique(agegroup)]
