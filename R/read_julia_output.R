@@ -31,7 +31,7 @@ read_julia_output <- function(juliaout_path, data_path) {
 }
 
 read_output <- function(path, type, model = "US-model") {
-  agegroup <-NULL
+  agegroup <- NULL
   age_lvls <- c("below18", "18-25", "25-30", "30-50", "50-65", "above65")
   read_agegroup <- function(path, file) {
     agegroup <- NULL
@@ -53,15 +53,15 @@ read_output <- function(path, type, model = "US-model") {
 augment_flows <- function(flows, districts) {
   resid1 <- resid2 <- fromdens <- i.density <- distcode <- NULL
   year <- todens <- year <- fromdist <- todist <- . <- NULL
-  preds <-
-    flows[, resid1 := (flows - preds) / preds]
+
+  preds <-flows[, resid1 := (flows - preds) / preds]
   flows[, resid2 := sign(resid1) * log(1 + abs(resid1))]
   flows[districts, fromdens := i.density, on = .(fromdist = distcode, year)]
   flows[districts, todens := i.density, on = .(todist = distcode, year)]
-  impute_actual_zeros(dt_flows, -10)
+  impute_actual_zeros(flows, -10)
   data.table::setnames(flows, "dist", "distance")
-  dt_flows <- dt_flows[fromdist != 3159] ## these should not be in here!
-  dt_flows <- dt_flows[todist != 3159] ## these should not be in here!
+  flows <- flows[fromdist != 3159] ## these should not be in here!
+  flows <- flows[todist != 3159] ## these should not be in here!
   return(flows)
 }
 impute_actual_zeros <- function(dt, mean = -15) {
