@@ -9,7 +9,7 @@
 ##' @import data.table
 ##' @export read_julia_output
 read_julia_output <- function(juliaout_path, data_path) {
-  districts <- fread(file.path(data_path, "districts.csv"))
+  districts <- data.table::fread(file.path(data_path, "districts.csv"))
   ##    path <- file.path(path, "manuscript_input")
   path <- juliaout_path
   dt_geog <- read_output(path, "germgeog")
@@ -31,6 +31,7 @@ read_julia_output <- function(juliaout_path, data_path) {
 }
 
 read_output <- function(path, type, model = "US-model") {
+  agegroup <-NULL
   age_lvls <- c("below18", "18-25", "25-30", "30-50", "50-65", "above65")
   read_agegroup <- function(path, file) {
     agegroup <- NULL
@@ -50,6 +51,8 @@ read_output <- function(path, type, model = "US-model") {
   return(dt)
 }
 augment_flows <- function(flows, districts) {
+  resid1 <- resid2 <- fromdens <- i.density <- distcode <- NULL
+  year <- todens <- year <- fromdist <- todist <- NULL
   preds <-
     flows[, resid1 := (flows - preds) / preds]
   flows[, resid2 := sign(resid1) * log(1 + abs(resid1))]
@@ -62,13 +65,17 @@ augment_flows <- function(flows, districts) {
   return(flows)
 }
 impute_actual_zeros <- function(dt, mean = -15) {
+  actual_imp <- flows <- NULL
   dt[, actual_imp := as.double(flows)]
   rnds <- rlnorm(dt[flows == 0, .N], mean, log(2.0))
   dt[flows == 0, actual_imp := rnds]
   return(NULL)
 }
 augment_geog_germ <- function(data_path, geog, flows, districts) {
-  shp <- setDT(sf::read_sf(file.path(data_path,
+  AGS <- year <- net <- i.net <- region <- agegroup <- total <- NULL
+  geometry <- i.geometry <- pop_all <- i.pop <- distcode <- NULL
+  total_pred <- i.total <- NULL
+  shp <- data.table::setDT(sf::read_sf(file.path(data_path,
                                      "clean/shapes/districts.shp")))
   shp[, AGS := as.integer(AGS)]
   ## There is something wrong with 2017. Apparently it holds all years
@@ -85,31 +92,39 @@ augment_geog_germ <- function(data_path, geog, flows, districts) {
   return(geog)
 }
 params_add_year <- function(dt_params) {
+  grp <- agegroup <- parname <- year <- i.year <- NULL
   dt_params[, grp := 1 : .N, keyby = .(agegroup, parname)]
   years <- c(2000:2002, 2004:2017)
   n_years <- length(years)
-  rec_grp <- data.table(grp = 1:n_years, year = years)
+  rec_grp <- data.table::data.table(grp = 1:n_years, year = years)
   dt_params[rec_grp, year := i.year, on = .(grp)]
 }
 dens_add_saxdens <- function(dt_dens, districts) {
+  logreldens <- year <- bl_name <- distcode <- name <- NULL
+  minlogreldens <- maxlogreldens <- fromsax <- i.distcode <- NULL
+  fromdens <- tosax <- todens <- NULL
   districts[, logreldens := log(density / median(density))]
-  sax <- districts[year == 2017][bl_name == "Sachsen"][, .(distcode, name, logreldens)]
+  sax <- districts[year == 2017][
+    bl_name == "Sachsen"][, .(distcode, name, logreldens)]
   ##    sax <- sax[distcode %notin% c(14524, 14511, 14612, 14713)]
   tol <- 0.1 # Define a small tolerance
   sax[, minlogreldens := logreldens - tol]
   sax[, maxlogreldens := logreldens + tol]
 
-  dt_dens[sax, fromsax := i.distcode, on = .(fromdens > minlogreldens, fromdens < maxlogreldens)]
-  dt_dens[sax, tosax := i.distcode, on = .(todens > minlogreldens, todens < maxlogreldens)]
+  dt_dens[sax, fromsax := i.distcode,
+          on = .(fromdens > minlogreldens, fromdens < maxlogreldens)]
+  dt_dens[sax, tosax := i.distcode,
+          on = .(todens > minlogreldens, todens < maxlogreldens)]
   message("Added approximate density of Saxonian districts")
   return(sax)
 }
 dens_add_year <- function(dt_dens, dt_flows) {
+  grp <- agegroup <- year <- i.year <- NULL
   ## there are 10000 rows per year and agegroup
   dt_dens[, grp := 1 : .N, keyby = agegroup]
   dt_dens[, grp := ceiling(grp / 10e3)]
-  n_years <- dt_flows[, uniqueN(year)]
+  n_years <- dt_flows[, data.table::uniqueN(year)]
   years <- dt_flows[, unique(year)]
-  rec_grp <- data.table(grp = 1:n_years, year = years)
+  rec_grp <- data.table::data.table(grp = 1:n_years, year = years)
   dt_dens[rec_grp, year := i.year, on = .(grp)]
 }
