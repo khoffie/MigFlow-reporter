@@ -67,7 +67,7 @@ augment_flows <- function(flows, districts) {
 impute_actual_zeros <- function(dt, mean = -15) {
   actual_imp <- flows <- NULL
   dt[, actual_imp := as.double(flows)]
-  rnds <- rlnorm(dt[flows == 0, .N], mean, log(2.0))
+  rnds <- stats::rlnorm(dt[flows == 0, .N], mean, log(2.0))
   dt[flows == 0, actual_imp := rnds]
   return(NULL)
 }
@@ -106,8 +106,9 @@ params_add_year <- function(dt_params) {
 dens_add_saxdens <- function(dt_dens, districts) {
   logreldens <- year <- bl_name <- distcode <- name <- NULL
   minlogreldens <- maxlogreldens <- fromsax <- i.distcode <- NULL
+  density <- . <- NULL
   fromdens <- tosax <- todens <- NULL
-  districts[, logreldens := log(density / median(density))]
+  districts[, logreldens := log(density / stats::median(density))]
   sax <- districts[year == 2017][
     bl_name == "Sachsen"][, .(distcode, name, logreldens)]
   ##    sax <- sax[distcode %notin% c(14524, 14511, 14612, 14713)]
@@ -123,7 +124,7 @@ dens_add_saxdens <- function(dt_dens, districts) {
   return(sax)
 }
 dens_add_year <- function(dt_dens, dt_flows) {
-  grp <- agegroup <- year <- i.year <- NULL
+  grp <- agegroup <- year <- i.year <- . <- NULL
   ## there are 10000 rows per year and agegroup
   dt_dens[, grp := 1 : .N, keyby = agegroup]
   dt_dens[, grp := ceiling(grp / 10e3)]
