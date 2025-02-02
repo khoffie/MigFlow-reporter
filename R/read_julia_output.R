@@ -105,8 +105,9 @@ read_julia_output <- function(juliaout_path, data_path) {
   dt_dens <- read_output(path, "germdensfun")
   sax <- dens_add_saxdens(dt_dens, districts)
   dens_add_year(dt_dens, dt_flows)
-  shp_st <- setDT(sf::st_read(file.path(data_path, "raw/shapes/states.shp")))
-  cor_ext <- fread(file.path(data_path, "clean/correct.csv"))[year < 2021]
+  shp_st <- sf::read_sf(file.path(data_path, "raw/shapes/states.shp"))
+  shp_st <- data.table::setDT(shp_st)
+  cor_ext <- data.table::fread(file.path(data_path, "clean/correct.csv"))[year < 2021]
   out <- list(dt_flows = dt_flows, dt_geog = dt_geog, dt_dens = dt_dens,
               dt_params = dt_params, districts = districts,
               shp_st = shp_st, cor_ext = cor_ext, sax = sax)
