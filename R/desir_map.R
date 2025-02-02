@@ -6,6 +6,7 @@
 ##' @author Konstantin Hoffie
 ##' @export make_desirmaps
 ##' @import ggplot2
+##' @import helpeR
 make_desirmaps <- function(dt, type = c("desir", "net")) {
   des <- desir_map(dt, type[1])
   net <- desir_map(dt, type[2])

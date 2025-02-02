@@ -11,14 +11,16 @@
 ##' @import ggplot2
 ##' @export plot_comparison
 plot_comparison <- function(dt_flows, age, main, n = 50e3, color = TRUE) {
+  model <- NULL
   compare_gravity <- function(dt_flows) {
     fromdist <- todist <- year <- agegroup <- flows <- distance <- NULL
     . <- frompop <- topop <- preds <- actual_imp <- .SD <- NULL
-    gravity <- NULL
+    gravity <- model <- NULL
     dt_plt <- dt_flows[, .(fromdist, todist, year, agegroup,
                            flows, distance, frompop, topop, preds, actual_imp)]
-    dt_plt[, gravity := predict(helpeR::fit_gravity(.SD, offset = FALSE), type = "response"),
-           keyby = .(agegroup)]
+    dt_plt[, gravity :=
+               stats::predict(helpeR::fit_gravity(.SD, offset = FALSE),
+                              type = "response"), keyby = .(agegroup)]
     data.table::setnames(dt_plt, "preds", "baseline-flow")
     dt_plt <- dt_plt[sample(1:.N, min(n, .N), replace = FALSE)]
     dtm <- data.table::melt(dt_plt,

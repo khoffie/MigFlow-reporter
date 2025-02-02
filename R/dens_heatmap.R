@@ -36,7 +36,7 @@ densheatmap <- function(dt, sax, min_y = 2011) {
     if(age == "below18") {
         age <- "unter 18"
     }
-    main <- sprintf("Dichteübergangsfunktion %s", age)
+    main <- sprintf("Dichte\u00FCbergangsfunktion %s", age)
     plt <- ggplot(dt2, aes(fromdens, todens, fill = funval)) +
         geom_tile() +
         facet_wrap(~year, scales = "fixed") +
@@ -44,8 +44,8 @@ densheatmap <- function(dt, sax, min_y = 2011) {
         theme_bw() +
         theme(legend.position = "none") +
         labs(title = main,
-             x = "Bevölkerungsdichte Ursprung",
-             y = "Bevölkerungsdichte Ziel") +
+             x = "Bev\u00F6lkerungsdichte Ursprung",
+             y = "Bev\u00F6lkerungsdichte Ziel") +
         geom_rug(data = dt2[fromsax %in% sax[, distcode]], aes(x = fromdens), sides = "b") +
         geom_rug(data = dt2[tosax %in% sax[, distcode]], aes(x = todens), sides = "l") +
         scale_x_continuous(breaks = brks, labels = reverse(brks)) +

@@ -5,11 +5,13 @@ Authors@R:
     person("Konstantin", "Hoffie", , "first.last@example.com",
     role = c("aut", "cre"),
     comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: This package contains some helper scripts to generate the report. It has no standalone use
-License: `use_mit_license()`
+Description: This package contains some helper scripts to generate the report.
+License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Depends:
     data.table,
-    ggplot2
+    ggplot2,
+    helpeR,
+    sf

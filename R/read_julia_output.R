@@ -7,6 +7,7 @@
 ##' @return list, list of data.tables
 ##' @author Konstantin Hoffie
 ##' @import data.table
+##' @import sf
 ##' @export read_julia_output
 read_julia_output <- function(juliaout_path, data_path) {
   districts <- data.table::fread(file.path(data_path, "districts.csv"))
@@ -96,7 +97,7 @@ augment_geog_germ <- function(data_path, geog, flows, districts) {
   return(geog)
 }
 params_add_year <- function(dt_params) {
-  grp <- agegroup <- parname <- year <- i.year <- NULL
+  grp <- agegroup <- parname <- year <- i.year <- . <- NULL
   dt_params[, grp := 1 : .N, keyby = .(agegroup, parname)]
   years <- c(2000:2002, 2004:2017)
   n_years <- length(years)
