@@ -9,90 +9,6 @@
 ##' @import data.table
 ##' @export read_julia_output
 read_julia_output <- function(juliaout_path, data_path) {
-  read_output <- function(path, type, model = "US-model") {
-    age_lvls <- c("below18", "18-25", "25-30", "30-50", "50-65", "above65")
-    read_agegroup <- function(path, file) {
-      agegroup <- NULL
-      dt <- data.table::fread(file.path(path, file))
-      dt[, agegroup := get_age(file)]
-      return(dt)
-    }
-    get_age <- function(file) {
-      age <- data.table::tstrsplit(file, "_")[[3]]
-      age <- data.table::tstrsplit(age, "\\.")[[1]]
-      return(age)
-    }
-    dt <- data.table::rbindlist(lapply(list.files(path, pattern = type),
-                                       function(x) read_agegroup(path, x)))
-    dt[, agegroup := factor(agegroup, levels = age_lvls)]
-    dt[, model := model]
-    return(dt)
-  }
-  augment_flows <- function(flows, districts) {
-    preds <-
-    flows[, resid1 := (flows - preds) / preds]
-    flows[, resid2 := sign(resid1) * log(1 + abs(resid1))]
-    flows[districts, fromdens := i.density, on = .(fromdist = distcode, year)]
-    flows[districts, todens := i.density, on = .(todist = distcode, year)]
-    impute_actual_zeros(dt_flows, -10)
-    data.table::setnames(flows, "dist", "distance")
-    dt_flows <- dt_flows[fromdist != 3159] ## these should not be in here!
-    dt_flows <- dt_flows[todist != 3159] ## these should not be in here!
-    return(flows)
-  }
-  impute_actual_zeros <- function(dt, mean = -15) {
-    dt[, actual_imp := as.double(flows)]
-    rnds <- rlnorm(dt[flows == 0, .N], mean, log(2.0))
-    dt[flows == 0, actual_imp := rnds]
-    return(NULL)
-  }
-  augment_geog_germ <- function(data_path, geog, flows, districts) {
-    shp <- setDT(sf::read_sf(file.path(data_path,
-                                       "clean/shapes/districts.shp")))
-    shp[, AGS := as.integer(AGS)]
-    ## There is something wrong with 2017. Apparently it holds all years
-    ## 2011 to 2017 but they are not distinguished.
-    geog[, year := rep(c(2000:2002, 2004:2017), each = 401 * 6)]
-    net <- calculate_net(flows, "flows", by = c("year", "agegroup"))
-    net_pred <- calculate_net(flows, "preds", by = c("year", "agegroup"))
-    geog[net, net := i.net, on = .(distcode = region, year, agegroup)]
-    geog[net, total := i.total, on = .(distcode = region, year, agegroup)]
-    geog[shp, geometry := i.geometry, on = .(distcode = AGS)]
-    geog[districts, pop_all := i.pop, on = .(distcode, year)]
-    geog[net_pred, net_pred := i.net, on = .(distcode = region, year, agegroup)]
-    geog[net_pred, total_pred := i.total, on = .(distcode = region, year, agegroup)]
-    return(geog)
-  }
-  params_add_year <- function(dt_params) {
-    dt_params[, grp := 1 : .N, keyby = .(agegroup, parname)]
-    years <- c(2000:2002, 2004:2017)
-    n_years <- length(years)
-    rec_grp <- data.table(grp = 1:n_years, year = years)
-    dt_params[rec_grp, year := i.year, on = .(grp)]
-  }
-  dens_add_saxdens <- function(dt_dens, districts) {
-    districts[, logreldens := log(density / median(density))]
-    sax <- districts[year == 2017][bl_name == "Sachsen"][, .(distcode, name, logreldens)]
-    ##    sax <- sax[distcode %notin% c(14524, 14511, 14612, 14713)]
-    tol <- 0.1 # Define a small tolerance
-    sax[, minlogreldens := logreldens - tol]
-    sax[, maxlogreldens := logreldens + tol]
-
-    dt_dens[sax, fromsax := i.distcode, on = .(fromdens > minlogreldens, fromdens < maxlogreldens)]
-    dt_dens[sax, tosax := i.distcode, on = .(todens > minlogreldens, todens < maxlogreldens)]
-    message("Added approximate density of Saxonian districts")
-    return(sax)
-  }
-  dens_add_year <- function(dt_dens, dt_flows) {
-    ## there are 10000 rows per year and agegroup
-    dt_dens[, grp := 1 : .N, keyby = agegroup]
-    dt_dens[, grp := ceiling(grp / 10e3)]
-    n_years <- dt_flows[, uniqueN(year)]
-    years <- dt_flows[, unique(year)]
-    rec_grp <- data.table(grp = 1:n_years, year = years)
-    dt_dens[rec_grp, year := i.year, on = .(grp)]
-  }
-
   districts <- fread(file.path(data_path, "districts.csv"))
   ##    path <- file.path(path, "manuscript_input")
   path <- juliaout_path
@@ -112,4 +28,88 @@ read_julia_output <- function(juliaout_path, data_path) {
               dt_params = dt_params, districts = districts,
               shp_st = shp_st, cor_ext = cor_ext, sax = sax)
   return(out)
+}
+
+read_output <- function(path, type, model = "US-model") {
+  age_lvls <- c("below18", "18-25", "25-30", "30-50", "50-65", "above65")
+  read_agegroup <- function(path, file) {
+    agegroup <- NULL
+    dt <- data.table::fread(file.path(path, file))
+    dt[, agegroup := get_age(file)]
+    return(dt)
+  }
+  get_age <- function(file) {
+    age <- data.table::tstrsplit(file, "_")[[3]]
+    age <- data.table::tstrsplit(age, "\\.")[[1]]
+    return(age)
+  }
+  dt <- data.table::rbindlist(lapply(list.files(path, pattern = type),
+                                     function(x) read_agegroup(path, x)))
+  dt[, agegroup := factor(agegroup, levels = age_lvls)]
+  dt[, model := model]
+  return(dt)
+}
+augment_flows <- function(flows, districts) {
+  preds <-
+    flows[, resid1 := (flows - preds) / preds]
+  flows[, resid2 := sign(resid1) * log(1 + abs(resid1))]
+  flows[districts, fromdens := i.density, on = .(fromdist = distcode, year)]
+  flows[districts, todens := i.density, on = .(todist = distcode, year)]
+  impute_actual_zeros(dt_flows, -10)
+  data.table::setnames(flows, "dist", "distance")
+  dt_flows <- dt_flows[fromdist != 3159] ## these should not be in here!
+  dt_flows <- dt_flows[todist != 3159] ## these should not be in here!
+  return(flows)
+}
+impute_actual_zeros <- function(dt, mean = -15) {
+  dt[, actual_imp := as.double(flows)]
+  rnds <- rlnorm(dt[flows == 0, .N], mean, log(2.0))
+  dt[flows == 0, actual_imp := rnds]
+  return(NULL)
+}
+augment_geog_germ <- function(data_path, geog, flows, districts) {
+  shp <- setDT(sf::read_sf(file.path(data_path,
+                                     "clean/shapes/districts.shp")))
+  shp[, AGS := as.integer(AGS)]
+  ## There is something wrong with 2017. Apparently it holds all years
+  ## 2011 to 2017 but they are not distinguished.
+  geog[, year := rep(c(2000:2002, 2004:2017), each = 401 * 6)]
+  net <- calculate_net(flows, "flows", by = c("year", "agegroup"))
+  net_pred <- calculate_net(flows, "preds", by = c("year", "agegroup"))
+  geog[net, net := i.net, on = .(distcode = region, year, agegroup)]
+  geog[net, total := i.total, on = .(distcode = region, year, agegroup)]
+  geog[shp, geometry := i.geometry, on = .(distcode = AGS)]
+  geog[districts, pop_all := i.pop, on = .(distcode, year)]
+  geog[net_pred, net_pred := i.net, on = .(distcode = region, year, agegroup)]
+  geog[net_pred, total_pred := i.total, on = .(distcode = region, year, agegroup)]
+  return(geog)
+}
+params_add_year <- function(dt_params) {
+  dt_params[, grp := 1 : .N, keyby = .(agegroup, parname)]
+  years <- c(2000:2002, 2004:2017)
+  n_years <- length(years)
+  rec_grp <- data.table(grp = 1:n_years, year = years)
+  dt_params[rec_grp, year := i.year, on = .(grp)]
+}
+dens_add_saxdens <- function(dt_dens, districts) {
+  districts[, logreldens := log(density / median(density))]
+  sax <- districts[year == 2017][bl_name == "Sachsen"][, .(distcode, name, logreldens)]
+  ##    sax <- sax[distcode %notin% c(14524, 14511, 14612, 14713)]
+  tol <- 0.1 # Define a small tolerance
+  sax[, minlogreldens := logreldens - tol]
+  sax[, maxlogreldens := logreldens + tol]
+
+  dt_dens[sax, fromsax := i.distcode, on = .(fromdens > minlogreldens, fromdens < maxlogreldens)]
+  dt_dens[sax, tosax := i.distcode, on = .(todens > minlogreldens, todens < maxlogreldens)]
+  message("Added approximate density of Saxonian districts")
+  return(sax)
+}
+dens_add_year <- function(dt_dens, dt_flows) {
+  ## there are 10000 rows per year and agegroup
+  dt_dens[, grp := 1 : .N, keyby = agegroup]
+  dt_dens[, grp := ceiling(grp / 10e3)]
+  n_years <- dt_flows[, uniqueN(year)]
+  years <- dt_flows[, unique(year)]
+  rec_grp <- data.table(grp = 1:n_years, year = years)
+  dt_dens[rec_grp, year := i.year, on = .(grp)]
 }
