@@ -1,7 +1,5 @@
 ##' Reads parameter estimates from Julia model
 ##' @param jp character, path to julia output
-##' @param dp character, path to data folder, e.g.
-##'   GermanMigration/data
 ##' @return data.table
 ##' @import data.table
 ##' @export read_params
